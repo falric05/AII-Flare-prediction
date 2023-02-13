@@ -1,17 +1,17 @@
 # Specify the base image
-FROM tensorflow/tensorflow:latest
-# FROM tensorflow/tensorflow:latest
-# FROM python:3.10
+FROM python:3.8
 
 # Update the package manager and install a simple module. The RUN command
 # will execute a command on the container and then save a snapshot of the
 # results. The last of these snapshots will be the final image
-RUN apt-get update -y && apt-get install -y zip graphviz
+RUN apt-get update -y && apt-get install -y zip
 
 # Install additional Python packages
-RUN pip install jupyter pandas scikit-learn matplotlib ipympl rise jupyter-contrib-nbextensions pydot tensorflow-lattice tensorflow-probability pandas
+RUN pip install jupyter==1.0.0 pandas==1.4.4 scikit-learn==1.1.2 matplotlib==3.5.3 ipympl==0.9.2 rise==5.7.1 jupyter-contrib-nbextensions==0.5.1 tensorflow==2.11
+RUN jupyter contrib nbextension install --system
+RUN pip install --upgrade tensorflow-probability
 
-# RUN pip install webcolors
+# RUN pip install jupyter pandas scikit-learn matplotlib ipympl rise jupyter-contrib-nbextensions pydot tensorflow-lattice tensorflow-probability pandas jsonschema webcolors
 # RUN jupyter contrib nbextension install --system
 
 # Make sure the contents of our repo are in /app
