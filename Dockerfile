@@ -7,7 +7,9 @@ FROM python:3.8
 RUN apt-get update -y && apt-get install -y zip
 
 # Install additional Python packages
-RUN pip install jupyter==1.0.0 pandas==1.4.4 scikit-learn==1.1.2 matplotlib==3.5.3 ipympl==0.9.2 rise==5.7.1 jupyter-contrib-nbextensions==0.5.1 tensorflow==2.11
+RUN pip install jupyter==1.0.0 pandas==1.4.4 scikit-learn==1.1.2 matplotlib==3.5.3 \
+                ipympl==0.9.2 rise==5.7.1 jupyter-contrib-nbextensions==0.5.1 \
+                tensorflow==2.11 tqdm==4.64.1
 RUN jupyter contrib nbextension install --system
 RUN pip install --upgrade tensorflow-probability
 
