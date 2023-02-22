@@ -3,7 +3,7 @@ import numpy as np
 
 figsize = (14, 4)
 
-def plot_serie(X, thr=None):
+def plot_serie(X, labels=None, thr=None):
     """
     PLots one single time serie
     ## Params
@@ -11,8 +11,11 @@ def plot_serie(X, thr=None):
     * `thr` is a threshold with same dimension of X. By default is `None`
     """
     assert thr is None or len(X) == len(thr)
+    t = np.arange(len(X))
     plt.figure(figsize=figsize)
-    plt.plot(np.arange(len(X)), X)
+    plt.plot(t, X)
+    if not labels is None:
+        plt.scatter(t[labels], X[labels], color='orange', alpha=0.8)
     plt.xlabel('t')
     plt.ylabel('X(t)')
     plt.legend()

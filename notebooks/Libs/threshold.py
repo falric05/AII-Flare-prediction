@@ -1,11 +1,14 @@
-class LabelGenerator():
-    grid = None
-    params = None
+import numpy as np
+from itertools import product
 
-    def __init__(self, grid, params) -> None:
-        self.grid = grid
-        self.params = params
+def get_labels_physics(grid, params):
+    thr = np.ones(grid.shape)
+    for s, m in product(params['sigma'], params['mu']):
+        thr[:, params['sigma'].index(s), :, params['mu'].index(m), :, :] *= m * (1 + s)
+    return grid > thr
 
-    def get_labels(self, method='sigma mu'):
-        assert method in ['sigma-mu', 'KDE AE', 'quantile']
-        
+def get_labels_KDE(grid, params):
+    raise NotImplementedError()
+
+def get_labels_quantile(grid, params):
+    raise NotImplementedError()
