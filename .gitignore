@@ -1,3 +1,7 @@
 .ipynb_checkpoints/
 .vscode/
+notebooks/Libs/__pycache__
+
+# grid
+Data/grid.npy
 # /papers/notes.md
