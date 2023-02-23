@@ -38,8 +38,7 @@ class DataLoader():
                                   len(self.params['delta']),
                                   self.params['N']))
             for r in tqdm(range(self.params['run'])):
-                for s, t, d, m in product(self.params['sigma'], self.params['theta'], 
-                                          self.params['delta'], self.params['mu']):
+                for s, t, d, m in product(self.params['sigma'], self.params['theta'], self.params['delta'], self.params['mu']):
                     si = self.params['sigma'].index(s)
                     ti = self.params['theta'].index(t)
                     di = self.params['delta'].index(d)
