@@ -22,7 +22,7 @@ def plot_serie(X, labels=None, thr=None):
     plt.show()
 
 
-def plot_grid_datapoints(grid, params, run=0, sigma=0.5, theta=0.1, mu=1, delta=0.2, variation=None, num_run=10):
+def plot_grid_datapoints(grid, params, run=0, sigma=0.5, theta=0.1, mu=1, delta=0.2, labels=None, variation=None, num_run=10):
     """
     Plots datapoints according to pre-defined parameters
     ## Params
@@ -37,14 +37,20 @@ def plot_grid_datapoints(grid, params, run=0, sigma=0.5, theta=0.1, mu=1, delta=
     """
     assert run in range(params['run'])
     assert variation in list(params.keys())+[None]
+    assert labels is None or variation is None
+
     sigma = params['sigma'].index(sigma)
     theta = params['theta'].index(theta)
     mu = params['mu'].index(mu)
     delta = params['delta'].index(delta)
     plt.figure(figsize=figsize)
     if variation is None:
-        Xs = grid[run, sigma, theta, delta, :]
-        plt.plot(Xs)
+        Xs = grid[run, sigma, theta, mu, delta, :]
+        t = np.arange(grid.shape[-1])
+        plt.plot(t, Xs)
+        if not labels is None:
+            ys = labels[run, sigma, theta, mu, delta, :]
+            plt.scatter(t[ys], Xs[ys], color='orange', alpha=0.8)
     else:
         if variation == 'theta':
             Xs = grid[run, sigma, :, mu, delta, :]
