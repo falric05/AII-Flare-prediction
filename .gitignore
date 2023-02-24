@@ -2,6 +2,6 @@
 .vscode/
 notebooks/Libs/__pycache__
 
-# grid
-Data/grid.npy
+# data
+Data/
 # /papers/notes.md
