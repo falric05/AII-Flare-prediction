@@ -80,3 +80,54 @@ def plot_bidimensional_datapoints(array, params, name):
     plt.ylabel('X(t)')
     plt.legend()
     plt.show()
+
+def plot_grid_PDF(grid, params, run=0, sigma=0.5, theta=0.1, mu=1, delta=0.2, bins=10):
+    """
+    Plots datapoints according to pre-defined parameters
+    ## Params
+    * `grid` grid variables
+    * `params` dictionary of parameters
+    * `run=0`
+    * `sigma=0.5` 
+    * `theta=0.1`
+    * `mu=1`
+    * `delta=0.2`
+    * `variation` if specified plots light curves according to different values of this parameter
+    """
+    assert run in range(params['run'])
+    
+    si = params['sigma'].index(sigma)
+    ti = params['theta'].index(theta)
+    mi = params['mu'].index(mu)
+    di = params['delta'].index(delta)
+    plt.figure(figsize=figsize)
+    # if variation is None:
+    Xs = grid[run, si, ti, mi, di, :].copy().flatten()
+
+    lmbda = 2*theta/(sigma**2)
+
+    t = np.arange(0.1, bins, 0.1)
+    
+    pX_notNorm = np.exp(-(lmbda*mu/ t)) / (t**(lmbda+2))
+    px = pX_notNorm / np.linalg.norm(pX_notNorm)
+
+    plt.plot(t, px, color='r')
+    # normalized histogram of Xs
+    hist, _ = np.histogram(Xs, bins=bins)
+    hist = hist / np.sum(hist) 
+    t = np.arange(bins)
+
+    plt.bar(t, hist)
+
+    plt.xlabel('X')
+    plt.ylabel('dP/dX')
+    # plt.legend()
+    plt.show()
+
+
+# def pdf(X, mu, theta, sigma):
+#     lmbda = 2*theta/(sigma**2)
+#     pX_notNorm = np.exp((-lmbda)*mu/X)/X**(lmbda+2)
+#     px = pX_notNorm/np.linalg.norm(pX_notNorm)
+
+#     return pX / np.max(pX)
