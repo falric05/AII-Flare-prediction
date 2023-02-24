@@ -5,7 +5,7 @@ import os
 
 from Libs.config import data_folder
 
-def get_labels_physics(grid, params, alpha=1):
+def get_labels_physic(grid, params, alpha=1):
     """
     Compute the threshold by considering the parameters that generated the current light curve
     as `thr = μ + α*σ*μ`
@@ -14,13 +14,19 @@ def get_labels_physics(grid, params, alpha=1):
     * `params`: params dictionary
     * `alpha`: weight coefficient of stimated stochastic component (α), by default is equal to 1
     """
-    thr = np.ones(grid.shape)
-    for r in range(params['run']):
-        for s, m in product(params['sigma'], params['mu']):
-            si = params['sigma'].index(s)
-            mi = params['mu'].index(m)
-            thr[r, si, :, mi, :, :] *= m * (1 + alpha*s)
-    return grid >= thr
+    if not os.path.exists(os.path.join(data_folder, 'labels_physic.npy')):
+        thr = np.ones(grid.shape)
+        for r in range(params['run']):
+            for s, m in product(params['sigma'], params['mu']):
+                si = params['sigma'].index(s)
+                mi = params['mu'].index(m)
+                thr[r, si, :, mi, :, :] *= m * (1 + alpha*s)
+        pred = grid >= thr
+        # store labels
+        np.save(os.path.join(data_folder, 'labels_physic'), pred, allow_pickle=True)
+    # load labels
+    pred = np.load(os.path.join(data_folder, 'labels_physic'+'.npy'), allow_pickle=True)
+    return pred
 
 def get_labels_KDE(grid, params, quantile=0.99):
     """
