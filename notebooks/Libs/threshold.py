@@ -74,8 +74,38 @@ def get_labels_KDE(grid, params, quantile=0.99):
     pred = np.load(os.path.join(data_folder, 'labels_anomaly_detection'+'.npy'), allow_pickle=True)
     return pred
 
-def get_labels_quantile(grid, params):
-    raise NotImplementedError()
+def get_labels_quantile(grid, params, percentile=0.8):
+    labels = np.copy(grid)
+    for s, t, d, m in product(params['sigma'], params['theta'],params['delta'], params['mu']):
+        si = params['sigma'].index(s)
+        ti = params['theta'].index(t)
+        di = params['delta'].index(d)
+        mi = params['mu'].index(m)
+        # stima del percentile
+        values = np.sort(grid[:,si,ti,mi,di,:].flatten())
+        # normalized_values = values/values[-1]
+        treshold = values[int(percentile*params['run']*params['N'])] # 0.8 * 30 * 1000
+        view = labels[:,si,ti,mi,di,:]
+        view[view>treshold] = 1
+        view[view<=treshold] = 0
+    return labels.astype('bool')
+
+def get_labels_quantile_on_run(grid, params, percentile=0.8):
+    labels = np.copy(grid)
+    for ri in range(params['run']):
+        for s, t, d, m in product(params['sigma'], params['theta'],params['delta'], params['mu']):
+            si = params['sigma'].index(s)
+            ti = params['theta'].index(t)
+            di = params['delta'].index(d)
+            mi = params['mu'].index(m)
+            # stima del percentile
+            values = np.sort(grid[ri,si,ti,mi,di,:])
+            normalized_values = values/values[-1]
+            treshold = normalized_values[int(percentile*params['N'])]
+            view = labels[ri,si,ti,mi,di,:]
+            view[view>treshold] = 1
+            view[view<=treshold] = 0
+    return labels.astype('bool')
 
 def get_labels_mean_std(grid, params):
     # l = 2*theta/((sigma)**2)

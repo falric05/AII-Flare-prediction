@@ -69,7 +69,7 @@ class DataLoader():
         """
         return self.grid[run, self.standard_index[0], self.standard_index[1], self.standard_index[2], self.standard_index[3], :]
     
-    def get_standard_indeces(self):
+    def get_standard_indexes(self):
         """
         Return standard values indeces
         """
