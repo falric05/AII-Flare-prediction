@@ -12,3 +12,6 @@ https://academic.oup.com/mnrasl/article/479/1/L139/5046460
 
 * Link al notebook su cui ho iniziato a buttar giù cose, la prima parte era intesa come introduzione al modello che ci hanno fornito per spiegare un po' cosa rappresentava, ovviamente la devo ancora sistemare
 https://colab.research.google.com/drive/1knrSwTTwwuP0xhvj5lNBAjNJGBPWXNOS?usp=sharing
+
+* Tutorial CNN per time series classification
+https://keras.io/examples/timeseries/timeseries_classification_from_scratch/
