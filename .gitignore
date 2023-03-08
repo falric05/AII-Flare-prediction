@@ -1,6 +1,7 @@
 .ipynb_checkpoints/
 .vscode/
 notebooks/Libs/__pycache__
+notebooks/CNN_best_weights.h5
 
 # data
 Data/
