@@ -5,7 +5,7 @@ import os
 
 from Libs.config import data_folder
 
-def get_labels_physic(grid, params, alpha=1, classification=False):
+def get_labels_physic(grid, params, alpha=1, classification=False, override=True):
     """
     Compute the threshold by considering the parameters that generated the current light curve
     as `thr = μ + α*σ*μ`
@@ -19,7 +19,7 @@ def get_labels_physic(grid, params, alpha=1, classification=False):
     else:
         filename = 'labels_physic'
             
-    if not os.path.exists(os.path.join(data_folder, filename+'.npy')):
+    if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
         thr = np.ones(grid.shape)
         for r in range(params['run']):
             for s, m in product(params['sigma'], params['mu']):
@@ -33,7 +33,7 @@ def get_labels_physic(grid, params, alpha=1, classification=False):
     pred = np.load(os.path.join(data_folder, filename+'.npy'), allow_pickle=True)
     return pred
 
-def get_labels_KDE(grid, params, quantile=0.99, classification=False):
+def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=True):
     """
     Estimate the threshold following the KDE anomaly detection approach
     ## Params
@@ -46,7 +46,7 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False):
     else:
         filename = 'labels_anomaly_detection'
     
-    if not os.path.exists(os.path.join(data_folder, filename+'.npy')):
+    if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
         pred = np.ones(grid.shape, dtype=bool)
 
         for s, t, d, m in product(params['sigma'], params['theta'], params['delta'], params['mu']):
@@ -84,13 +84,13 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False):
     pred = np.load(os.path.join(data_folder, filename+'.npy'), allow_pickle=True)
     return pred
 
-def get_labels_quantile(grid, params, percentile=0.8, classification=False):
+def get_labels_quantile(grid, params, percentile=0.8, classification=False, override=True):
     if classification:
         filename = 'classification_labels_quantile'
     else:
         filename = 'labels_quantile'
     
-    if not os.path.exists(os.path.join(data_folder, filename+'.npy')):
+    if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
         labels = np.copy(grid)
         for s, t, d, m in product(params['sigma'], params['theta'],params['delta'], params['mu']):
             si = params['sigma'].index(s)
@@ -110,13 +110,13 @@ def get_labels_quantile(grid, params, percentile=0.8, classification=False):
     
     return result
 
-def get_labels_quantile_on_run(grid, params, percentile=0.8, classification=False):
+def get_labels_quantile_on_run(grid, params, percentile=0.8, classification=False, override=True):
     if classification:
         filename = 'classification_labels_quantile_on_run'
     else:
         filename = 'labels_quantile_on_run'
     
-    if not os.path.exists(os.path.join(data_folder, filename+'.npy')):
+    if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
         labels = np.copy(grid)
         for ri in range(params['run']):
             for s, t, d, m in product(params['sigma'], params['theta'],params['delta'], params['mu']):

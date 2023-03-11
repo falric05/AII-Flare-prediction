@@ -129,7 +129,7 @@ class ClassificationDataLoader():
         self.params['delta'] = [d]
         self.params['N'] = N
         
-    def load_data(self, labelling_method=get_labels_physic, verbose=True):
+    def load_data(self, labelling_method=get_labels_physic, override=False, verbose=True):
         
         s = self.params['sigma'][0]
         t = self.params['theta'][0]
@@ -141,7 +141,7 @@ class ClassificationDataLoader():
         filename = 'classification_data'
         if verbose:
                 print('Loading Data')
-        if not os.path.exists(os.path.join(data_folder, filename+'.npy')):
+        if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
             generator = range(self.params['run'])
             if verbose:
                 generator = tqdm(generator)
@@ -178,16 +178,16 @@ class ClassificationDataLoader():
 class DataLoader():
     params = {
         'run': 30,
-        'sigma': [0.3, 0.4, 0.5, 0.6],
+        'sigma': [0.5],
         'theta': [0.01, 0.1, 0.5, 3],
-        'mu': [0.8, 0.9, 1, 1.1],
-        'delta': [0.01,0.05, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7],
-        'N': 1000
+        'mu': [1],
+        'delta': [0.2],
+        'N': 10000
     }
     standard_index = None
     grid = None
 
-    def __closed_form_method(self, theta, mu, sigma, delta_t, x0=1, N=1000):
+    def __closed_form_method(self, theta, mu, sigma, delta_t, x0=1, N=10000):
         X = np.zeros(N)
         X[0] = x0
         W = np.random.normal(0, 1, size=N)
