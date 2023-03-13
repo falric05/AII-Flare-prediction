@@ -55,10 +55,16 @@ def get_dataset_split(grid_X, grid_y, idx, test_size = 0.2, val_size=0.2, window
             np.random.seed(random_state)
             run_perm = np.random.permutation(grid_X.shape[0])
             if get_validation:
-                X_train_configuration = grid_X[run_perm[:run_val_index], idx[0], idx[1], idx[2], idx[3], :]
-                y_train_configuration = grid_y[run_perm[:run_val_index], idx[0], idx[1], idx[2], idx[3], :]
-                X_val_configuration = grid_X[run_perm[run_val_index:run_test_index], idx[0], idx[1], idx[2], idx[3], :]
-                y_val_configuration = grid_y[run_perm[run_val_index:run_test_index], idx[0], idx[1], idx[2], idx[3], :]
+                # Training set
+                X_train_configuration = grid_X[run_perm[:run_val_index], idx[0], idx[1], idx[2], idx[3], :] \
+                    if not idx is None else grid_X[run_perm[:run_val_index], :, :, :, :, :]
+                y_train_configuration = grid_y[run_perm[:run_val_index], idx[0], idx[1], idx[2], idx[3], :] \
+                    if not idx is None else grid_y[run_perm[:run_val_index], :, :, :, :, :]
+                # Validation set
+                X_val_configuration = grid_X[run_perm[run_val_index:run_test_index], idx[0], idx[1], idx[2], idx[3], :] \
+                    if not idx is None else grid_X[run_perm[run_val_index:run_test_index], :, :, :, :, :]
+                y_val_configuration = grid_y[run_perm[run_val_index:run_test_index], idx[0], idx[1], idx[2], idx[3], :] \
+                    if not idx is None else grid_y[run_perm[run_val_index:run_test_index], :, :, :, :, :]
             else:
                 X_train_configuration = grid_X[run_perm[:run_test_index], idx[0], idx[1], idx[2], idx[3], :]
                 y_train_configuration = grid_y[run_perm[:run_test_index], idx[0], idx[1], idx[2], idx[3], :]
@@ -66,15 +72,51 @@ def get_dataset_split(grid_X, grid_y, idx, test_size = 0.2, val_size=0.2, window
             y_test_configuration = grid_y[run_perm[run_test_index:], idx[0], idx[1], idx[2], idx[3], :]
         else:
             if get_validation:
-                X_train_configuration = grid_X[:run_val_index, idx[0], idx[1], idx[2], idx[3], :]
-                y_train_configuration = grid_y[:run_val_index, idx[0], idx[1], idx[2], idx[3], :]
-                X_val_configuration = grid_X[run_val_index:run_test_index, idx[0], idx[1], idx[2], idx[3], :]
-                y_val_configuration = grid_y[run_val_index:run_test_index, idx[0], idx[1], idx[2], idx[3], :]
+                # get training set
+                X_train_configuration = grid_X[:run_val_index, idx[0], idx[1], idx[2], idx[3], :] \
+                    if not idx is None else grid_X[:run_val_index, :, :, :, :, :]
+                y_train_configuration = grid_y[:run_val_index, idx[0], idx[1], idx[2], idx[3], :] \
+                    if not idx is None else grid_y[:run_val_index, :, :, :, :, :]
+                # reshape
+                X_train_configuration = X_train_configuration.reshape((np.prod(
+                                                                            X_train_configuration.shape[:-1]), 
+                                                                            X_train_configuration.shape[-1])
+                                                                     )
+                y_train_configuration = y_train_configuration.reshape((np.prod(
+                                                                            y_train_configuration.shape[:-1]), 
+                                                                            y_train_configuration.shape[-1])
+                                                                     )
+                # get validation set
+                X_val_configuration = grid_X[run_val_index:run_test_index, idx[0], idx[1], idx[2], idx[3], :] \
+                    if not idx is None else grid_X[run_val_index:run_test_index, :, :, :, :, :]
+                y_val_configuration = grid_y[run_val_index:run_test_index, idx[0], idx[1], idx[2], idx[3], :] \
+                    if not idx is None else grid_y[run_val_index:run_test_index, :, :, :, :, :]
+                # reshape
+                X_val_configuration = X_val_configuration.reshape((np.prod(
+                                                                        X_val_configuration.shape[:-1]), 
+                                                                        X_val_configuration.shape[-1])
+                                                                )
+                y_val_configuration = y_val_configuration.reshape((np.prod(
+                                                                        y_val_configuration.shape[:-1]), 
+                                                                        y_val_configuration.shape[-1])
+                                                                )
             else:
                 X_train_configuration = grid_X[:run_test_index, idx[0], idx[1], idx[2], idx[3], :]
                 y_train_configuration = grid_y[:run_test_index, idx[0], idx[1], idx[2], idx[3], :]
-            X_test_configuration = grid_X[run_test_index:, idx[0], idx[1], idx[2], idx[3], :]
-            y_test_configuration = grid_y[run_test_index:, idx[0], idx[1], idx[2], idx[3], :]
+            # get test set
+            X_test_configuration = grid_X[run_test_index:, idx[0], idx[1], idx[2], idx[3], :] \
+                    if not idx is None else grid_X[run_test_index:, :, :, :, :, :]
+            y_test_configuration = grid_y[run_test_index:, idx[0], idx[1], idx[2], idx[3], :] \
+                    if not idx is None else grid_y[run_test_index:, :, :, :, :, :]
+            # reshape
+            X_test_configuration = X_test_configuration.reshape((np.prod(
+                                                                    X_test_configuration.shape[:-1]), 
+                                                                    X_test_configuration.shape[-1])
+                                                            )
+            y_test_configuration = y_test_configuration.reshape((np.prod(
+                                                                    y_test_configuration.shape[:-1]), 
+                                                                    y_test_configuration.shape[-1])
+                                                            )
         
         # here df_train and df_test doesn't contain windows that share runs
         df_train = build_df(X_train_configuration, y_train_configuration)
@@ -107,6 +149,7 @@ def get_dataset_split(grid_X, grid_y, idx, test_size = 0.2, val_size=0.2, window
     else:
         return df_train, df_test
 
+
 class ClassificationDataLoader():
     params = {}
     time_series = None
@@ -123,10 +166,10 @@ class ClassificationDataLoader():
     
     def __init__(self, run=1000, N=1000, s=0.5, t=0.01, d=0.2, m=1):
         self.params['run'] = run
-        self.params['sigma'] = [s]
-        self.params['theta'] = [t]
-        self.params['mu'] = [m]
-        self.params['delta'] = [d]
+        self.params['sigma'] = s if type(s)==list else [s]
+        self.params['theta'] = t if type(t)==list else [t]
+        self.params['mu']    = m if type(m)==list else [m]
+        self.params['delta'] = d if type(d)==list else [d]
         self.params['N'] = N
         
     def load_data(self, labelling_method=get_labels_physic, override=False, verbose=True):
@@ -176,14 +219,7 @@ class ClassificationDataLoader():
         
 
 class DataLoader():
-    params = {
-        'run': 30,
-        'sigma': [0.5],
-        'theta': [0.01, 0.1, 0.5, 3],
-        'mu': [1],
-        'delta': [0.2],
-        'N': 10000
-    }
+    params = {}
     standard_index = None
     grid = None
 
@@ -196,10 +232,17 @@ class DataLoader():
             X[i+1] = X[i] + theta*(mu - X[i])*delta_t + sigma*W[i]*X[i]*np.sqrt(delta_t) + 0.5*(sigma**2)*X[i]*delta_t*(W[i]**2 - 1)
         return X
 
-    def __init__(self):
+    def __init__(self, run=1000, N=1000, s=0.5, t=0.01, d=0.2, m=1, 
+                 labelling_method=get_labels_physic, override=False):
+        self.params['run'] = run
+        self.params['sigma'] = s if type(s)==list else [s]
+        self.params['theta'] = t if type(t)==list else [t]
+        self.params['mu']    = m if type(m)==list else [m]
+        self.params['delta'] = d if type(d)==list else [d]
+        self.params['N'] = N
         grid_path = os.path.join(data_folder, 'grid')
 
-        if not(Path(grid_path+'.npy').is_file()):
+        if not(Path(grid_path+'.npy').is_file()) or override:
             self.grid = np.zeros((self.params['run'], 
                                   len(self.params['sigma']),
                                   len(self.params['theta']),
@@ -212,19 +255,20 @@ class DataLoader():
                     ti = self.params['theta'].index(t)
                     di = self.params['delta'].index(d)
                     mi = self.params['mu'].index(m)
-                    self.grid[r,si,ti,mi,di,:] = self.__closed_form_method(t, m, s, d)
+                    self.grid[r,si,ti,mi,di,:] = self.__closed_form_method(t, m, s, d, N=self.params['N'])
             # store grid data
             np.save(grid_path, self.grid, allow_pickle=True)
         self.grid = np.load(grid_path+'.npy', allow_pickle=True)
         # takes indeces of preferred parameters
         self.standard_index = (self.params['sigma'].index(0.5), self.params['theta'].index(0.01),
                                self.params['delta'].index(0.2), self.params['mu'].index(1))
-    
+        self.labels = labelling_method(self.grid, self.params, classification=True)
+
     def get_grid(self):
         """
         Return grid
         """
-        return self.grid
+        return self.grid, self.labels
     
     def get_params(self):
         """
