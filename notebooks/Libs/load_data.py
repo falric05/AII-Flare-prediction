@@ -164,15 +164,19 @@ class ClassificationDataLoader():
             X[i+1] = X[i] + theta*(mu - X[i])*delta_t + sigma*W[i]*X[i]*np.sqrt(delta_t) + 0.5*(sigma**2)*X[i]*delta_t*(W[i]**2 - 1)
         return X
     
-    def __init__(self, run=1000, N=1000, s=0.5, t=0.01, d=0.2, m=1):
+    def __init__(self, run=1000, N=1000, s=0.5, t=0.01, d=0.2, m=1, override=False):
         self.params['run'] = run
         self.params['sigma'] = s if type(s)==list else [s]
         self.params['theta'] = t if type(t)==list else [t]
         self.params['mu']    = m if type(m)==list else [m]
         self.params['delta'] = d if type(d)==list else [d]
         self.params['N'] = N
+        self.override = override
         
-    def load_data(self, labelling_method=get_labels_physic, override=False, verbose=True):
+        
+    def load_data(self, labelling_method=get_labels_physic, verbose=True):
+        
+        
         
         s = self.params['sigma'][0]
         t = self.params['theta'][0]
@@ -184,7 +188,7 @@ class ClassificationDataLoader():
         filename = 'classification_data'
         if verbose:
                 print('Loading Data')
-        if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
+        if (not os.path.exists(os.path.join(data_folder, filename+'.npy'))) or self.override:
             generator = range(self.params['run'])
             if verbose:
                 generator = tqdm(generator)

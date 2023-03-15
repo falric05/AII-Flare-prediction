@@ -2,6 +2,7 @@ import numpy as np
 from itertools import product
 from sklearn.neighbors import KernelDensity
 import os
+import pandas as pd
 
 from Libs.config import data_folder
 
@@ -56,6 +57,64 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
             mi = params['mu'].index(m)
 
             l = []
+            signals = []
+            for r in range(params['run']):
+                run = grid[r, si, ti, mi, di, :].copy()
+                max_value = run.max()
+                run = run / max_value
+                q1 = np.quantile(run, 0.25) 
+                q3 = np.quantile(run, 0.75) 
+                sigma = run.std()
+                m =  len(run)
+                h = 0.9 * min(sigma, (q3-q1)/ 1.34) * m**(-0.2)
+                kde = KernelDensity(kernel='gaussian', bandwidth=h)
+                kde.fit(run.reshape(-1, 1))
+                ldens = kde.score_samples(run.reshape(-1, 1)) # Obtain log probabilities
+                index = np.arange(len(run))
+                signal = pd.Series(index=index, data=-ldens)
+                signals.append(signal)
+                scores = kde.score_samples(run.reshape(-1, 1))
+                l.append(np.quantile(scores, 0.99))
+        
+            thr = np.mean(l)
+
+            preds = []
+            for r in range(params['run']):
+                preds.append(pd.Series(signals[r].index[signals[r] >= thr]))
+            
+            pred[:, si, ti, mi, di, :] = np.array(preds)
+
+        # store labels
+        np.save(os.path.join(data_folder, filename), pred, allow_pickle=True)
+    # load labels
+    pred = np.load(os.path.join(data_folder, filename+'.npy'), allow_pickle=True)
+    return pred
+
+
+'''
+def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=True):
+    """
+    Estimate the threshold following the KDE anomaly detection approach
+    ## Params
+    * `grid`: grid of light curves
+    * `params`: params dictionary
+    * `alpha`: weight coefficient of stimated stochastic component (α), by default is equal to 1
+    """
+    if classification:
+        filename = 'classification_labels_anomaly_detection'
+    else:
+        filename = 'labels_anomaly_detection'
+    
+    if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
+        pred = np.ones(grid.shape, dtype=bool)
+
+        for s, t, d, m in product(params['sigma'], params['theta'], params['delta'], params['mu']):
+            si = params['sigma'].index(s)
+            ti = params['theta'].index(t)
+            di = params['delta'].index(d)
+            mi = params['mu'].index(m)
+
+            l = []
             for r in range(params['run']):
                 Xr = grid[r, si, ti, mi, di, :].copy()
                 # normalize data
@@ -83,6 +142,7 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
     # load labels
     pred = np.load(os.path.join(data_folder, filename+'.npy'), allow_pickle=True)
     return pred
+'''
 
 def get_labels_quantile(grid, params, percentile=0.8, classification=False, override=True):
     if classification:
@@ -105,7 +165,7 @@ def get_labels_quantile(grid, params, percentile=0.8, classification=False, over
             view[view>treshold] = 1
             view[view<=treshold] = 0
         result = labels.astype('bool')
-        np.save(os.path.join(data_folder, filename), pred, allow_pickle=True)
+        np.save(os.path.join(data_folder, filename), result, allow_pickle=True)
     result = np.load(os.path.join(data_folder, filename+'.npy'), allow_pickle=True)
     
     return result
