@@ -3,7 +3,6 @@ from itertools import product
 from sklearn.neighbors import KernelDensity
 import os
 import pandas as pd
-from tqdm import tqdm
 
 from Libs.config import data_folder
 
@@ -51,10 +50,7 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
     if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
         flares = np.ones(grid.shape, dtype=bool)
         
-        total_loops = len(params['sigma'])*len(params['theta'])*len(params['delta'])*len(params['mu'])
-        configs = tqdm(product(params['sigma'], params['theta'], params['delta'], params['mu']),
-                       total=total_loops)
-        for s, t, d, m in configs:
+        for s, t, d, m in product(params['sigma'], params['theta'], params['delta'], params['mu']):
             si = params['sigma'].index(s)
             ti = params['theta'].index(t)
             di = params['delta'].index(d)
