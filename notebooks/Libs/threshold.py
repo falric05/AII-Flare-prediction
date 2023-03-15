@@ -3,6 +3,7 @@ from itertools import product
 from sklearn.neighbors import KernelDensity
 import os
 import pandas as pd
+from tqdm import tqdm
 
 from Libs.config import data_folder
 
@@ -48,9 +49,12 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
         filename = 'labels_anomaly_detection'
     
     if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
-        pred = np.ones(grid.shape, dtype=bool)
-
-        for s, t, d, m in product(params['sigma'], params['theta'], params['delta'], params['mu']):
+        flares = np.ones(grid.shape, dtype=bool)
+        
+        total_loops = len(params['sigma'])*len(params['theta'])*len(params['delta'])*len(params['mu'])
+        configs = tqdm(product(params['sigma'], params['theta'], params['delta'], params['mu']),
+                       total=total_loops)
+        for s, t, d, m in configs:
             si = params['sigma'].index(s)
             ti = params['theta'].index(t)
             di = params['delta'].index(d)
@@ -71,7 +75,8 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
                 kde.fit(run.reshape(-1, 1))
                 ldens = kde.score_samples(run.reshape(-1, 1)) # Obtain log probabilities
                 index = np.arange(len(run))
-                signal = pd.Series(index=index, data=-ldens)
+                signal = -ldens
+                # signal = pd.Series(index=index, data=-ldens)
                 signals.append(signal)
                 scores = kde.score_samples(run.reshape(-1, 1))
                 l.append(np.quantile(scores, 0.99))
@@ -80,15 +85,14 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
 
             preds = []
             for r in range(params['run']):
-                preds.append(pd.Series(signals[r].index[signals[r] >= thr]))
-            
-            pred[:, si, ti, mi, di, :] = np.array(preds)
+                preds.append(signals[r] >= thr)
+            flares[:, si, ti, mi, di, :] = np.array(preds)
 
         # store labels
-        np.save(os.path.join(data_folder, filename), pred, allow_pickle=True)
+        np.save(os.path.join(data_folder, filename), flares, allow_pickle=True)
     # load labels
-    pred = np.load(os.path.join(data_folder, filename+'.npy'), allow_pickle=True)
-    return pred
+    flares = np.load(os.path.join(data_folder, filename+'.npy'), allow_pickle=True)
+    return flares
 
 
 '''
