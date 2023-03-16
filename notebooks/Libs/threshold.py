@@ -65,8 +65,8 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
                 q1 = np.quantile(run, 0.25) 
                 q3 = np.quantile(run, 0.75) 
                 sigma = run.std()
-                m =  len(run)
-                h = 0.9 * min(sigma, (q3-q1)/ 1.34) * m**(-0.2)
+                len_run =  len(run)
+                h = 0.9 * min(sigma, (q3-q1)/ 1.34) * len_run**(-0.2)
                 kde = KernelDensity(kernel='gaussian', bandwidth=h)
                 kde.fit(run.reshape(-1, 1))
                 ldens = kde.score_samples(run.reshape(-1, 1)) # Obtain log probabilities
@@ -75,7 +75,7 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
                 # signal = pd.Series(index=index, data=-ldens)
                 signals.append(signal)
                 scores = kde.score_samples(run.reshape(-1, 1))
-                l.append(np.quantile(scores, 0.99))
+                l.append(np.quantile(scores, quantile))
         
             thr = np.mean(l)
 
@@ -83,7 +83,8 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
             for r in range(params['run']):
                 preds.append(signals[r] >= thr)
             flares[:, si, ti, mi, di, :] = np.array(preds)
-
+            flares[:, si, ti, mi, di, :] = np.bitwise_and(flares[:, si, ti, mi, di, :], 
+                                                          grid[:, si, ti, mi, di, :] > m)
         # store labels
         np.save(os.path.join(data_folder, filename), flares, allow_pickle=True)
     # load labels
