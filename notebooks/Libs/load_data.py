@@ -175,9 +175,6 @@ class ClassificationDataLoader():
         
         
     def load_data(self, labelling_method=get_labels_physic, verbose=True):
-        
-        
-        
         s = self.params['sigma'][0]
         t = self.params['theta'][0]
         m = self.params['mu'][0]
@@ -254,18 +251,18 @@ class DataLoader():
                                   len(self.params['delta']),
                                   self.params['N']))
             for r in tqdm(range(self.params['run'])):
-                for s, t, d, m in product(self.params['sigma'], self.params['theta'], self.params['delta'], self.params['mu']):
+                for s, t, m, d in product(self.params['sigma'], self.params['theta'], self.params['mu'], self.params['delta']):
                     si = self.params['sigma'].index(s)
                     ti = self.params['theta'].index(t)
-                    di = self.params['delta'].index(d)
                     mi = self.params['mu'].index(m)
+                    di = self.params['delta'].index(d)
                     self.grid[r,si,ti,mi,di,:] = self.__closed_form_method(t, m, s, d, N=self.params['N'])
             # store grid data
             np.save(grid_path, self.grid, allow_pickle=True)
         self.grid = np.load(grid_path+'.npy', allow_pickle=True)
         # takes indeces of preferred parameters
-        self.standard_index = (self.params['sigma'].index(0.5), self.params['theta'].index(0.01),
-                               self.params['delta'].index(0.2), self.params['mu'].index(1))
+        self.standard_index = (self.params['sigma'].index(0.5), self.params['theta'].index(0.1),
+                               self.params['mu'].index(1), self.params['delta'].index(0.2))
         self.labels = labelling_method(self.grid, self.params, classification=True)
 
     def get_grid(self):

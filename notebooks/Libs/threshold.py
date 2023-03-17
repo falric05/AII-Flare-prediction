@@ -2,7 +2,7 @@ import numpy as np
 from itertools import product
 from sklearn.neighbors import KernelDensity
 import os
-import pandas as pd
+from tqdm import tqdm
 
 from Libs.config import data_folder
 
@@ -40,7 +40,7 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
     ## Params
     * `grid`: grid of light curves
     * `params`: params dictionary
-    * `alpha`: weight coefficient of stimated stochastic component (α), by default is equal to 1
+    * `quantile`: quantile which estimate the threshold for each run and configuration, default is 0.99
     """
     if classification:
         filename = 'classification_labels_anomaly_detection'
@@ -49,15 +49,19 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
     
     if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
         flares = np.ones(grid.shape, dtype=bool)
-        
-        for s, t, d, m in product(params['sigma'], params['theta'], params['delta'], params['mu']):
+        # iterate over all parameters configurations
+        configurations = tqdm(product(params['sigma'], params['theta'], params['mu'], params['delta']), 
+                              total=len(params['sigma'])*len(params['theta'])*len(params['mu'])*len(params['delta']))
+        for s, t, m, d in configurations:
+            # get the index of each configuration 
             si = params['sigma'].index(s)
             ti = params['theta'].index(t)
-            di = params['delta'].index(d)
             mi = params['mu'].index(m)
+            di = params['delta'].index(d)
 
             l = []
             signals = []
+            # get all the 30 threshold for a given configuration and store it in a list
             for r in range(params['run']):
                 run = grid[r, si, ti, mi, di, :].copy()
                 max_value = run.max()
@@ -70,19 +74,20 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
                 kde = KernelDensity(kernel='gaussian', bandwidth=h)
                 kde.fit(run.reshape(-1, 1))
                 ldens = kde.score_samples(run.reshape(-1, 1)) # Obtain log probabilities
-                index = np.arange(len(run))
                 signal = -ldens
-                # signal = pd.Series(index=index, data=-ldens)
                 signals.append(signal)
                 scores = kde.score_samples(run.reshape(-1, 1))
                 l.append(np.quantile(scores, quantile))
-        
+            # then compute the threshold mean for these 30 runs
             thr = np.mean(l)
-
+            # and get the predictions 
             preds = []
             for r in range(params['run']):
                 preds.append(signals[r] >= thr)
             flares[:, si, ti, mi, di, :] = np.array(preds)
+            # KDE in principle could detect as anomaly values which are lower than mu, but we think
+            # flares are just values higher than mu + a noise component, so we keep all anomalies which
+            # are higher than mu
             flares[:, si, ti, mi, di, :] = np.bitwise_and(flares[:, si, ti, mi, di, :], 
                                                           grid[:, si, ti, mi, di, :] > m)
         # store labels
@@ -90,60 +95,6 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
     # load labels
     flares = np.load(os.path.join(data_folder, filename+'.npy'), allow_pickle=True)
     return flares
-
-
-'''
-def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=True):
-    """
-    Estimate the threshold following the KDE anomaly detection approach
-    ## Params
-    * `grid`: grid of light curves
-    * `params`: params dictionary
-    * `alpha`: weight coefficient of stimated stochastic component (α), by default is equal to 1
-    """
-    if classification:
-        filename = 'classification_labels_anomaly_detection'
-    else:
-        filename = 'labels_anomaly_detection'
-    
-    if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
-        pred = np.ones(grid.shape, dtype=bool)
-
-        for s, t, d, m in product(params['sigma'], params['theta'], params['delta'], params['mu']):
-            si = params['sigma'].index(s)
-            ti = params['theta'].index(t)
-            di = params['delta'].index(d)
-            mi = params['mu'].index(m)
-
-            l = []
-            for r in range(params['run']):
-                Xr = grid[r, si, ti, mi, di, :].copy()
-                # normalize data
-                max_value = Xr.max()
-                Xr = Xr / max_value
-                # compute rule of thumb for bandwidth of KDE
-                q1 = np.quantile(Xr, 0.25) 
-                q3 = np.quantile(Xr, 0.75) 
-                sigma = Xr.std()
-                m =  len(Xr)
-                h = 0.9 * min(sigma, (q3-q1)/ 1.34) * m**(-0.2)
-                # fit the KDE model
-                kde = KernelDensity(kernel='gaussian', bandwidth=h)
-                kde.fit(Xr.reshape(-1, 1))
-                # extract the log probabilities
-                scores = kde.score_samples(Xr.reshape(-1, 1))
-                index = np.arange(len(Xr))
-                # build series with neg. prob.
-                signal = -scores
-                l.append(np.quantile(scores, quantile))
-            thr = np.mean(l)
-            pred[:, si, ti, mi, di] = signal >= thr
-        # store labels
-        np.save(os.path.join(data_folder, filename), pred, allow_pickle=True)
-    # load labels
-    pred = np.load(os.path.join(data_folder, filename+'.npy'), allow_pickle=True)
-    return pred
-'''
 
 def get_labels_quantile(grid, params, percentile=0.8, classification=False, override=True):
     if classification:
