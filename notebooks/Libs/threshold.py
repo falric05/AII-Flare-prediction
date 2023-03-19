@@ -4,9 +4,9 @@ from sklearn.neighbors import KernelDensity
 import os
 from tqdm import tqdm
 
-from Libs.config import data_folder
+from Libs.config import data_folder, default_data_folder
 
-def get_labels_physic(grid, params, alpha=1, classification=False, override=True):
+def get_labels_physic(grid, params, alpha=1, override=True, folder=default_data_folder):
     """
     Compute the threshold by considering the parameters that generated the current light curve
     as `thr = μ + α*σ*μ`
@@ -15,12 +15,9 @@ def get_labels_physic(grid, params, alpha=1, classification=False, override=True
     * `params`: params dictionary
     * `alpha`: weight coefficient of stimated stochastic component (α), by default is equal to 1
     """
-    if classification:
-        filename = 'classification_labels_physic'
-    else:
-        filename = 'labels_physic'
+    filename = 'labels_physic'
             
-    if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
+    if not os.path.exists(os.path.join(folder, filename+'.npy')) or override:
         thr = np.ones(grid.shape)
         for r in range(params['run']):
             for s, m in product(params['sigma'], params['mu']):
@@ -29,12 +26,12 @@ def get_labels_physic(grid, params, alpha=1, classification=False, override=True
                 thr[r, si, :, mi, :, :] *= m * (1 + alpha*s)
         pred = grid >= thr
         # store labels
-        np.save(os.path.join(data_folder, filename), pred, allow_pickle=True)
+        np.save(os.path.join(folder, filename), pred, allow_pickle=True)
     # load labels
-    pred = np.load(os.path.join(data_folder, filename+'.npy'), allow_pickle=True)
+    pred = np.load(os.path.join(folder, filename+'.npy'), allow_pickle=True)
     return pred
 
-def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=True):
+def get_labels_KDE(grid, params, quantile=0.99, override=True, folder=default_data_folder):
     """
     Estimate the threshold following the KDE anomaly detection approach
     ## Params
@@ -42,12 +39,10 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
     * `params`: params dictionary
     * `quantile`: quantile which estimate the threshold for each run and configuration, default is 0.99
     """
-    if classification:
-        filename = 'classification_labels_anomaly_detection'
-    else:
-        filename = 'labels_anomaly_detection'
     
-    if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
+    filename = 'labels_anomaly_detection'
+    
+    if not os.path.exists(os.path.join(folder, filename+'.npy')) or override:
         flares = np.ones(grid.shape, dtype=bool)
         # iterate over all parameters configurations
         configurations = tqdm(product(params['sigma'], params['theta'], params['mu'], params['delta']), 
@@ -91,18 +86,16 @@ def get_labels_KDE(grid, params, quantile=0.99, classification=False, override=T
             flares[:, si, ti, mi, di, :] = np.bitwise_and(flares[:, si, ti, mi, di, :], 
                                                           grid[:, si, ti, mi, di, :] > m)
         # store labels
-        np.save(os.path.join(data_folder, filename), flares, allow_pickle=True)
+        np.save(os.path.join(folder, filename), flares, allow_pickle=True)
     # load labels
-    flares = np.load(os.path.join(data_folder, filename+'.npy'), allow_pickle=True)
+    flares = np.load(os.path.join(folder, filename+'.npy'), allow_pickle=True)
     return flares
 
-def get_labels_quantile(grid, params, percentile=0.8, classification=False, override=True):
-    if classification:
-        filename = 'classification_labels_quantile'
-    else:
-        filename = 'labels_quantile'
+def get_labels_quantile(grid, params, percentile=0.8, override=True, folder=default_data_folder):
     
-    if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
+    filename = 'labels_quantile'
+    
+    if not os.path.exists(os.path.join(folder, filename+'.npy')) or override:
         labels = np.copy(grid)
         for s, t, d, m in product(params['sigma'], params['theta'],params['delta'], params['mu']):
             si = params['sigma'].index(s)
@@ -117,18 +110,16 @@ def get_labels_quantile(grid, params, percentile=0.8, classification=False, over
             view[view>treshold] = 1
             view[view<=treshold] = 0
         result = labels.astype('bool')
-        np.save(os.path.join(data_folder, filename), result, allow_pickle=True)
-    result = np.load(os.path.join(data_folder, filename+'.npy'), allow_pickle=True)
+        np.save(os.path.join(folder, filename), result, allow_pickle=True)
+    result = np.load(os.path.join(folder, filename+'.npy'), allow_pickle=True)
     
     return result
 
-def get_labels_quantile_on_run(grid, params, percentile=0.8, classification=False, override=True):
-    if classification:
-        filename = 'classification_labels_quantile_on_run'
-    else:
-        filename = 'labels_quantile_on_run'
+def get_labels_quantile_on_run(grid, params, percentile=0.8, override=True, folder=default_data_folder):
     
-    if not os.path.exists(os.path.join(data_folder, filename+'.npy')) or override:
+    filename = 'labels_quantile_on_run'
+    
+    if not os.path.exists(os.path.join(folder, filename+'.npy')) or override:
         labels = np.copy(grid)
         for ri in range(params['run']):
             for s, t, d, m in product(params['sigma'], params['theta'],params['delta'], params['mu']):
@@ -144,10 +135,11 @@ def get_labels_quantile_on_run(grid, params, percentile=0.8, classification=Fals
                 view[view>treshold] = 1
                 view[view<=treshold] = 0
         result = labels.astype('bool')
-    result = np.load(os.path.join(data_folder, filename+'.npy'), allow_pickle=True)
+        np.save(os.path.join(folder, filename), result, allow_pickle=True)
+    result = np.load(os.path.join(folder, filename+'.npy'), allow_pickle=True)
     return result
 
-def get_labels_mean_std(grid, params, classification=False):
+def get_labels_mean_std(grid, params, override=True, folder=default_data_folder):
     # l = 2*theta/((sigma)**2)
     # mean = l * mu / (l-1)
     # std = np.sqrt( l*(mu**2) / (l-2) )
