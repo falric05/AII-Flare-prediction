@@ -10,16 +10,33 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 def get_dataset_split(grid_X, grid_y, test_size = 0.2, val_size=0.2, window_size = 10, overlap_size = 0, label_treshold=1,
-                      split_on_run=False, shuffle_run=False, shuffle_window=False, get_validation=False, random_state=42):
-    def build_df(X_configuration, y_configuration, window_size=window_size, overlap_size=overlap_size, label_treshold = label_treshold):
+                      split_on_run=False, shuffle_run=False, shuffle_window=False, get_validation=False, random_state=42,
+                      get_info=False, params=None):
+    def build_df(X_configuration, y_configuration, window_size=window_size, overlap_size=overlap_size, label_treshold = label_treshold,
+                 get_info=get_info, info_params=None):
+        
         stride = window_size - overlap_size
         num_windows = (X_configuration.shape[-1]-window_size)//stride + 1
 
         windows = np.zeros((X_configuration.shape[0]*(num_windows-1),window_size))
         windows_label = np.zeros((y_configuration.shape[0]*(num_windows-1),window_size), dtype='bool')
-
+        
+        if get_info:
+            info_params_copy = info_params.copy()
+            info_params_copy['N'] = [info_params_copy['N']]
+            info_labels = list(info_params_copy.keys())[:-1]
+            info_configuration = [t for t in product(*info_params_copy.values())]
+            infos = np.zeros((X_configuration.shape[0]*(num_windows-1),len(info_labels)))
+            label_ranges = []
+            window_ranges = []
 
         for i in range(X_configuration.shape[0]):
+            if get_info:
+                label_ranges = label_ranges + [(j, j+window_size-1) for j in range(stride, stride*num_windows, stride)]
+                window_ranges = window_ranges + [(j, j+window_size-1) for j in range(0, stride*(num_windows-1), stride)]
+                for j in range(len(info_labels)):
+                    infos[i*(num_windows-1):(i+1)*(num_windows-1),j] = np.array([info_configuration[i][j]]*(num_windows-1))
+                    
             tmp_windows = np.array([X_configuration[i,j:j+window_size] for j in range(0,stride*num_windows,stride)])
             tmp_windows_labels = np.array([y_configuration[i,j:j+window_size] for j in range(0,stride*num_windows,stride)])
             windows[i*(num_windows-1):(i+1)*(num_windows-1),:] = tmp_windows[:-1,:]
@@ -31,16 +48,35 @@ def get_dataset_split(grid_X, grid_y, test_size = 0.2, val_size=0.2, window_size
         
         df = pd.DataFrame(windows, columns=[f't_{i}' for i in range(windows.shape[-1])])
         y_df = pd.DataFrame({'future_flare':windows_label})
-        df = pd.concat([df, y_df], axis=1)
+        if get_info:
+            info_df = pd.DataFrame(infos, columns = info_labels)
+            label_range_df = pd.DataFrame({'label_range':label_ranges})
+            window_range_df = pd.DataFrame({'window_range':window_ranges})
+            df = pd.concat([info_df, df, window_range_df, label_range_df, y_df], axis=1)
+            df = df.astype({'run':'int'})
+        else:
+            df = pd.concat([df, y_df], axis=1)
 
         return df
-
-    if len(grid_X.shape) == 2:
-        grid_X = np.copy(grid_X).reshape(grid_X.shape[0],1,1,1,1,grid_X.shape[1])
-        grid_y = np.copy(grid_y).reshape(grid_y.shape[0],1,1,1,1,grid_y.shape[1])
+    
+    if get_info:
+        params_copy = params.copy()
+        params_copy['run'] = list(range(params_copy['run']))
+    else:
+        params_copy = None
     
     if split_on_run:
+        if get_info:
+            params_train = params_copy.copy()
+            params_test = params_copy.copy()
+        else:
+            params_train = None
+            params_test = None
         if get_validation:
+            if get_info:
+                params_val = params_copy.copy()
+            else:
+                params_val = None
             train_size = 1-test_size-val_size
             run_val_index = int(train_size * grid_X.shape[0])
             run_test_index = int((train_size+val_size) * grid_X.shape[0])
@@ -48,48 +84,42 @@ def get_dataset_split(grid_X, grid_y, test_size = 0.2, val_size=0.2, window_size
             train_size = 1-test_size
             run_test_index = int(train_size * grid_X.shape[0])
         
-        
-        # Train split
         if shuffle_run:
             np.random.seed(random_state)
             run_perm = np.random.permutation(grid_X.shape[0])
-            if get_validation:
-                # Training set
-                X_train_configuration = grid_X[run_perm[:run_val_index], :, :, :, :, :]
-                y_train_configuration = grid_y[run_perm[:run_val_index], :, :, :, :, :]
-                # Validation set
-                X_val_configuration = grid_X[run_perm[run_val_index:run_test_index], :, :, :, :, :]
-                y_val_configuration = grid_y[run_perm[run_val_index:run_test_index], :, :, :, :, :]
-            else:
-                # Training
-                X_train_configuration = grid_X[run_perm[:run_test_index], :, :, :, :, :]
-                y_train_configuration = grid_y[run_perm[:run_test_index], :, :, :, :, :]
-            # Test set
-            X_test_configuration = grid_X[run_perm[run_test_index:], :, :, :, :, :]
-            y_test_configuration = grid_y[run_perm[run_test_index:], :, :, :, :, :]
         else:
-            if get_validation:
-                # Training set
-                X_train_configuration = grid_X[:run_val_index, :, :, :, :, :]
-                y_train_configuration = grid_y[:run_val_index, :, :, :, :, :]
-                
-                # Validation set
-                X_val_configuration = grid_X[run_val_index:run_test_index, :, :, :, :, :]
-                y_val_configuration = grid_y[run_val_index:run_test_index, :, :, :, :, :]
-            else:
-                # Training set
-                X_train_configuration = grid_X[:run_test_index, :, :, :, :, :]
-                y_train_configuration = grid_y[:run_test_index, :, :, :, :, :]
-            # Test set
-            X_test_configuration = grid_X[run_test_index:, :, :, :, :, :]
-            y_test_configuration = grid_y[run_test_index:, :, :, :, :, :]
+            run_perm = np.arange(grid_X.shape[0])
+            
+        if get_validation:
+            # Training set
+            X_train_configuration = grid_X[run_perm[:run_val_index], :, :, :, :, :]
+            y_train_configuration = grid_y[run_perm[:run_val_index], :, :, :, :, :]
+            if get_info:
+                params_train['run'] = run_perm[:run_val_index].tolist()
+            # Validation set
+            X_val_configuration = grid_X[run_perm[run_val_index:run_test_index], :, :, :, :, :]
+            y_val_configuration = grid_y[run_perm[run_val_index:run_test_index], :, :, :, :, :]
+            if get_info:
+                params_val['run'] = run_perm[run_val_index:run_test_index].tolist()
+        else:
+            # Training
+            X_train_configuration = grid_X[run_perm[:run_test_index], :, :, :, :, :]
+            y_train_configuration = grid_y[run_perm[:run_test_index], :, :, :, :, :]
+            if get_info:
+                params_train['run'] = run_perm[:run_test_index].tolist()
+        # Test set
+        X_test_configuration = grid_X[run_perm[run_test_index:], :, :, :, :, :]
+        y_test_configuration = grid_y[run_perm[run_test_index:], :, :, :, :, :]
+        if get_info:
+            params_test['run'] = run_perm[run_test_index:].tolist()
+        
         
         # Training set
         X_train_configuration = X_train_configuration.reshape((np.prod(X_train_configuration.shape[:-1]),
                                                                X_train_configuration.shape[-1]))
         y_train_configuration = y_train_configuration.reshape((np.prod(y_train_configuration.shape[:-1]), 
                                                                y_train_configuration.shape[-1]))
-        df_train = build_df(X_train_configuration, y_train_configuration)
+        df_train = build_df(X_train_configuration, y_train_configuration, info_params=params_train)
         if shuffle_window:
             df_train = df_train.sample(frac=1, random_state=random_state)
         
@@ -101,7 +131,7 @@ def get_dataset_split(grid_X, grid_y, test_size = 0.2, val_size=0.2, window_size
                                                                X_val_configuration.shape[-1]))
             y_val_configuration = y_val_configuration.reshape((np.prod(y_val_configuration.shape[:-1]),
                                                                y_val_configuration.shape[-1]))
-            df_val = build_df(X_val_configuration, y_val_configuration)
+            df_val = build_df(X_val_configuration, y_val_configuration, info_params=params_val)
             if shuffle_window:
                 df_val = df_val.sample(frac=1, random_state=random_state)
             
@@ -110,13 +140,13 @@ def get_dataset_split(grid_X, grid_y, test_size = 0.2, val_size=0.2, window_size
                                                              X_test_configuration.shape[-1]))
         y_test_configuration = y_test_configuration.reshape((np.prod(y_test_configuration.shape[:-1]), 
                                                              y_test_configuration.shape[-1]))
-        df_test = build_df(X_test_configuration, y_test_configuration)
+        df_test = build_df(X_test_configuration, y_test_configuration, info_params=params_test)
         if shuffle_window:
             df_test = df_test.sample(frac=1, random_state=random_state)
     else:
         X_configuration = grid_X.reshape((np.prod(grid_X.shape[:-1]), grid_X.shape[-1]))
         y_configuration = grid_y.reshape((np.prod(grid_y.shape[:-1]), grid_y.shape[-1]))
-        df = build_df(X_configuration, y_configuration)
+        df = build_df(X_configuration, y_configuration, info_params=params_copy)
         
         if shuffle_window:
             df = df.sample(frac=1, random_state=random_state)
@@ -140,88 +170,6 @@ def get_dataset_split(grid_X, grid_y, test_size = 0.2, val_size=0.2, window_size
     else:
         return df_train, df_test
 
-'''
-class ClassificationDataLoader():
-    params = {}
-    time_series = None
-    labels = None
-    folder = None
-    
-    def __closed_form_method(self, theta, mu, sigma, delta_t, x0=1, N=1000):
-        X = np.zeros(N)
-        X[0] = x0
-        W = np.random.normal(0, 1, size=N)
-        W[0] = 0
-        for i in range(N-1):
-            X[i+1] = X[i] + theta*(mu - X[i])*delta_t + sigma*W[i]*X[i]*np.sqrt(delta_t) + 0.5*(sigma**2)*X[i]*delta_t*(W[i]**2 - 1)
-        return X
-    
-    def __init__(self, run=1000, N=1000, s=0.5, t=0.1, d=0.2, m=1, override=True, folder=default_data_folder, 
-                 labelling_method=get_labels_physics):
-        """
-        Use this to load data of shape (run,N) for a specified combination of parameters (s,t,d,m)
-        ## Params
-        * `override`: if True it will generate new data and labels and save them in the folder specified, 
-                      the name of the labels file depends on the labelling method used
-                      if False it will try to load both the data and the labels
-        * `folder`: specifies the folder where to save/load the data
-        * `labelling_method`: specifies the method for labelling the data
-        """
-        self.params['run'] = run
-        self.params['sigma'] = [s]
-        self.params['theta'] = [t]
-        self.params['mu']    = [m]
-        self.params['delta'] = [d]
-        self.params['N'] = N
-        self.override = override
-        self.folder = folder
-        self.labelling_method = labelling_method
-        
-        
-    def load_data(self, verbose=True):
-        s = self.params['sigma'][0]
-        t = self.params['theta'][0]
-        m = self.params['mu'][0]
-        d = self.params['delta'][0]
-        
-        self.time_series = np.zeros((self.params['run'], self.params['N']))
-        
-        filename = 'data'
-        if verbose:
-                print('Loading Data')
-        if (not os.path.exists(os.path.join(self.folder, filename+'.npy'))) or self.override:
-            generator = range(self.params['run'])
-            if verbose:
-                generator = tqdm(generator)
-            for r in generator:
-                self.time_series[r,:] = self.__closed_form_method(t, m, s, d)
-            np.save(os.path.join(self.folder, filename), self.time_series, allow_pickle=True)
-        self.time_series = np.load(os.path.join(self.folder, filename+'.npy'), allow_pickle=True)
-            
-        
-        if verbose:
-            print('Loading Labels')
-        adapter_grid = np.copy(self.time_series).reshape(self.time_series.shape[0],1,1,1,1,self.time_series.shape[1])
-        self.labels = self.labelling_method(adapter_grid, self.params, override=self.override, folder=self.folder)[:,0,0,0,0,:]
-        
-        if verbose:
-            print('Labels Loaded')
-            
-        return np.copy(self.time_series), np.copy(self.labels)
-        
-    
-    def get_params(self):
-        """
-        Return params dictionary
-        """
-        return self.params
-    
-    def get_standard_indexes(self):
-        """
-        Return standard values indeces
-        """
-        return (0,0,0,0)
-'''      
 
 class DataLoader():
     params = {}
