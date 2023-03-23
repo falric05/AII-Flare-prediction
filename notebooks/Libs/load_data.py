@@ -16,31 +16,31 @@ def get_dataset_split(grid_X, grid_y, test_size = 0.2, val_size=0.2, window_size
                  get_info=get_info, info_params=None):
         
         stride = window_size - overlap_size
-        num_windows = (X_configuration.shape[-1]-window_size)//stride + 1
+        num_windows = (X_configuration.shape[-1]-2*window_size)//stride + 1
 
-        windows = np.zeros((X_configuration.shape[0]*(num_windows-1),window_size))
-        windows_label = np.zeros((y_configuration.shape[0]*(num_windows-1),window_size), dtype='bool')
+        windows = np.zeros((X_configuration.shape[0]*num_windows,window_size))
+        windows_label = np.zeros((y_configuration.shape[0]*num_windows,window_size), dtype='bool')
         
         if get_info:
             info_params_copy = info_params.copy()
             info_params_copy['N'] = [info_params_copy['N']]
             info_labels = list(info_params_copy.keys())[:-1]
             info_configuration = [t for t in product(*info_params_copy.values())]
-            infos = np.zeros((X_configuration.shape[0]*(num_windows-1),len(info_labels)))
+            infos = np.zeros((X_configuration.shape[0]*num_windows,len(info_labels)))
             label_ranges = []
             window_ranges = []
 
         for i in range(X_configuration.shape[0]):
             if get_info:
-                label_ranges = label_ranges + [(j, j+window_size-1) for j in range(stride, stride*num_windows, stride)]
-                window_ranges = window_ranges + [(j, j+window_size-1) for j in range(0, stride*(num_windows-1), stride)]
+                label_ranges = label_ranges + [(j+window_size, j+2*window_size-1) for j in range(0, stride*num_windows, stride)]
+                window_ranges = window_ranges + [(j, j+window_size-1) for j in range(0, stride*num_windows, stride)]
                 for j in range(len(info_labels)):
-                    infos[i*(num_windows-1):(i+1)*(num_windows-1),j] = np.array([info_configuration[i][j]]*(num_windows-1))
+                    infos[i*num_windows:(i+1)*num_windows,j] = np.array([info_configuration[i][j]]*num_windows)
                     
-            tmp_windows = np.array([X_configuration[i,j:j+window_size] for j in range(0,stride*num_windows,stride)])
-            tmp_windows_labels = np.array([y_configuration[i,j:j+window_size] for j in range(0,stride*num_windows,stride)])
-            windows[i*(num_windows-1):(i+1)*(num_windows-1),:] = tmp_windows[:-1,:]
-            windows_label[i*(num_windows-1):(i+1)*(num_windows-1),:] = tmp_windows_labels[1:,:]
+            tmp_windows = np.array([X_configuration[i,j:j+2*window_size] for j in range(0,stride*num_windows,stride)])
+            tmp_windows_labels = np.array([y_configuration[i,j:j+2*window_size] for j in range(0,stride*num_windows,stride)])
+            windows[i*num_windows:(i+1)*num_windows,:] = tmp_windows[:,:window_size]
+            windows_label[i*num_windows:(i+1)*num_windows,:] = tmp_windows_labels[:,window_size:]
 
         windows_label = np.sum(windows_label, axis=-1)
         windows_label[windows_label<label_treshold] = 0
