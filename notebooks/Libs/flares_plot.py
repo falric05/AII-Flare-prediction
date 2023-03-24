@@ -23,7 +23,8 @@ def plot_serie(X, labels=None, thr=None, title=''):
     plt.show()
 
 
-def plot_grid_datapoints(grid, params, run=0, sigma=0.5, theta=0.1, mu=1, delta=0.2, num_run=5, variation=None, labels=None, title=''):
+def plot_grid_datapoints(grid, params, run=0, sigma=0.5, theta=0.1, mu=1, delta=0.2, num_run=5, variation=None, labels=None, title='',
+                        show=True):
     """
     Plots datapoints according to pre-defined parameters
     ## Params
@@ -87,7 +88,8 @@ def plot_grid_datapoints(grid, params, run=0, sigma=0.5, theta=0.1, mu=1, delta=
         plt.legend()
     plt.xlabel('t')
     plt.ylabel('X(t)')
-    plt.show()
+    if show:
+        plt.show()
 
 def plot_bidimensional_datapoints(array, params, name):
     params = params[name]
